@@ -14,7 +14,7 @@ data UniOp
     | Id
     | Flo
     | Cei
-    -- | Fac
+    | Fac
     deriving (Enum, Bounded)
 
 data Expr
@@ -27,6 +27,7 @@ instance Show Expr where
     show (BinExpr a op b) = concat ["(", show a, show op, show b, ")"]
     show (UniExpr Id a) = show a
     show (UniExpr Neg (Term 0.0)) = show 0.0
+    show (UniExpr Fac ex) = show ex ++ show Fac
     show (UniExpr op a) = concat ["(", show op, show a, ")"]
 
 instance Show BinOp where
@@ -41,7 +42,7 @@ instance Show UniOp where
     show Neg = "-"
     show Flo = "floor"
     show Cei = "ceil"
-    -- show Fac = "fact"
+    show Fac = "!"
 
 binOpToFun
     :: BinOp
@@ -59,8 +60,9 @@ uniOpToFun Id  = id
 uniOpToFun Neg = negate
 uniOpToFun Flo = fromIntegral . floor
 uniOpToFun Cei = fromIntegral . ceiling
--- uniOpToFun Fac = fact
---     where fact n = foldl' (*) 1 [1..n]
+uniOpToFun Fac = fact
+    where fact n | n < 10    = product [1..n]
+                 | otherwise = 0/0
 
 zeroPad
     :: [Int]
