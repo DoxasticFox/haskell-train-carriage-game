@@ -64,37 +64,16 @@ uniOpToFun Fac = fact
     where fact n | n < 10    = product [1..n]
                  | otherwise = 0/0
 
-zeroPad
-    :: [Int]
-    -> Int
-    -> [Int]
-zeroPad xs width =
-    let
-        padLen = max 0 (width - length xs)
-    in
-        (replicate padLen 0) ++ xs
-
-decTo'
-    :: Int
-    -> Int
-    -> [Int]
-decTo' base 0 = []
-decTo' base n = decTo' base (n `quot` base) ++ [n `rem` base]
-
 decTo
     :: Int
     -> Int
     -> Int
     -> [Int]
-decTo base dec width =
-    let bin = decTo' base dec
-    in  zeroPad bin width
-
-decToBin
-    :: Int
-    -> Int
-    -> [Int]
-decToBin dec width = decTo 2 dec width
+decTo base n width =
+    reverse $ decTo' n width
+    where
+        decTo' 0 width = replicate width 0
+        decTo' n width = n `rem` base : decTo' (n `quot` base) (width - 1)
 
 split
     :: [a]
@@ -102,7 +81,7 @@ split
     -> ([a], [a])
 split xs n =
     let
-        mask  = decToBin n (length xs)
+        mask  = decTo 2 n (length xs)
         left  = [x | (x, m) <- zip xs mask, m == 1]
         right = [x | (x, m) <- zip xs mask, m /= 1]
     in
