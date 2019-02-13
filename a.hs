@@ -22,6 +22,7 @@ data Expr
     | BinExpr Expr BinOp Expr
     | UniExpr UniOp Expr
 
+-- TODO: Simply expressions?
 instance Show Expr where
     show (Term a) = show a
     show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
