@@ -91,7 +91,7 @@ splits
     :: [a]
     -> [([a], [a])]
 splits xs =
-    map (split xs) [0..2^length xs - 2]
+    map (split xs) [1..2^length xs - 2]
 
 eval :: Expr -> Double
 eval (Term a)
