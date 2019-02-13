@@ -133,6 +133,24 @@ eval (BinExpr a op b) =
 eval (UniExpr op a) =
     (uniOpToFun op) (eval a)
 
+makeAll'
+    :: [Double]
+    -> ([Double] -> [([Double], [Double])])
+    -> [BinOp]
+    -> [Expr]
+makeAll' xs splits ops = let
+    exprPairs = [
+        (lExprs, rExprs) | (left, right) <- splits xs,
+                           lExprs        <- makeAll left,
+                           rExprs        <- makeAll right]
+
+    binExprs = [
+        BinExpr lExpr binOp rExpr | (lExpr, rExpr) <- exprPairs,
+                                    binOp          <- ops]
+    in
+        [UniExpr uniOp binExpr | uniOp   <- uniOps,
+                                 binExpr <- binExprs]
+
 makeAll
     :: [Double]
     -> [Expr]
@@ -142,24 +160,6 @@ makeAll [a] = [UniExpr uniOp (Term a) | uniOp <- uniOps]
 makeAll xs =
     makeAll' xs    commutativeSplits    commutativeOps ++
     makeAll' xs nonCommutativeSplits nonCommutativeOps
-    where
-        makeAll'
-            :: [Double]
-            -> ([Double] -> [([Double], [Double])])
-            -> [BinOp]
-            -> [Expr]
-        makeAll' xs splits ops = let
-            exprPairs = [
-                (lExprs, rExprs) | (left, right) <- splits xs,
-                                   lExprs        <- makeAll left,
-                                   rExprs        <- makeAll right]
-
-            binExprs = [
-                BinExpr lExpr binOp rExpr | (lExpr, rExpr) <- exprPairs,
-                                            binOp          <- ops]
-            in
-                [UniExpr uniOp binExpr | uniOp   <- uniOps,
-                                         binExpr <- binExprs]
 
 -- TODO: Memoise
 make
@@ -169,8 +169,8 @@ make
 make xs n = find (\expr -> eval expr == n) $ makeAll xs
 
 main = do
-    let ns = [0..9999]
-    let intLists = map (\n -> decTo 10 n 4) ns
+    let ns = [0..100]
+    let intLists = map (\n -> decTo 10 n 3) ns
     let nLists = map (map fromIntegral) intLists
     let exprs = map (\trainCarriageNumber -> make trainCarriageNumber 10) nLists
     let hasSol = sum [1 | (Just _) <- exprs]
