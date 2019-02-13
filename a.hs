@@ -139,17 +139,19 @@ makeAll'
     -> [BinOp]
     -> [Expr]
 makeAll' xs splits ops = let
-    exprPairs = [
-        (lExprs, rExprs) | (left, right) <- splits xs,
-                           lExprs        <- makeAll left,
-                           rExprs        <- makeAll right]
+    exprPairs :: [Double] -> [(Expr, Expr)]
+    exprPairs xs' = [
+        (lExpr, rExpr) | (left, right) <- splits xs',
+                         lExpr         <- makeAll left,
+                         rExpr         <- makeAll right]
 
-    binExprs = [
-        BinExpr lExpr binOp rExpr | (lExpr, rExpr) <- exprPairs,
+    binExprs :: [(Expr, Expr)] -> [Expr]
+    binExprs exprPairs' = [
+        BinExpr lExpr binOp rExpr | (lExpr, rExpr) <- exprPairs',
                                     binOp          <- ops]
     in
         [UniExpr uniOp binExpr | uniOp   <- uniOps,
-                                 binExpr <- binExprs]
+                                 binExpr <- binExprs (exprPairs xs)]
 
 makeAll
     :: [Double]
