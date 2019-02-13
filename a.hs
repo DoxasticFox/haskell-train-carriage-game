@@ -1,3 +1,4 @@
+import Control.Applicative
 import Data.Char
 import Data.List
 
@@ -72,23 +73,28 @@ nonCommutativeOps =
 
 binOpToFun
     :: BinOp
-    -> (Double -> Double -> Double)
-binOpToFun Add = (+)
-binOpToFun Sub = (-)
-binOpToFun Mul = (*)
-binOpToFun Div = (/)  -- TODO: (0/0) ^ 0 != 1
-binOpToFun Exp = (**) -- TODO: 0^0 != 1
+    -> (Maybe Double -> Maybe Double -> Maybe Double)
+binOpToFun Add = liftA2 (+)
+binOpToFun Sub = liftA2 (-)
+binOpToFun Mul = liftA2 (*)
+binOpToFun Div = div'
+   where
+      div' a (Just 0) = Nothing
+      div' a b        = liftA2 (/) a b
+binOpToFun Exp = liftA2 (**)
 
 uniOpToFun
     :: UniOp
-    -> (Double -> Double)
-uniOpToFun Id  = id
-uniOpToFun Neg = negate
-uniOpToFun Flo = fromIntegral . floor
-uniOpToFun Cei = fromIntegral . ceiling
+    -> (Maybe Double -> Maybe Double)
+uniOpToFun Id  = liftA id
+uniOpToFun Neg = liftA negate
+uniOpToFun Flo = liftA (fromIntegral . floor)
+uniOpToFun Cei = liftA (fromIntegral . ceiling)
 uniOpToFun Fac = fact
-    where fact n | n < 10    = product [1..n]
-                 | otherwise = 0/0
+    where
+        fact (Just n) | n < 10    = Just $ product [1..n]
+                      | otherwise = Nothing
+        fact Nothing  = Nothing
 
 decTo
     :: Int
@@ -125,9 +131,9 @@ commutativeSplits
 commutativeSplits xs =
     map (split xs) [1..2^(length xs - 1) - 1]
 
-eval :: Expr -> Double
+eval :: Expr -> Maybe Double
 eval (Term a) =
-    a
+    Just a
 eval (BinExpr a op b) =
     (binOpToFun op) (eval a) (eval b)
 eval (UniExpr op a) =
@@ -168,11 +174,11 @@ make
     :: [Double]
     -> Double
     -> Maybe Expr
-make xs n = find (\expr -> eval expr == n) $ makeAll xs
+make xs n = find (\expr -> eval expr == Just n) $ makeAll xs
 
 main = do
     let ns = [0..100]
-    let intLists = map (\n -> decTo 10 n 3) ns
+    let intLists = map (\n -> decTo 10 n 4) ns
     let nLists = map (map fromIntegral) intLists
     let exprs = map (\trainCarriageNumber -> make trainCarriageNumber 10) nLists
     let hasSol = sum [1 | (Just _) <- exprs]
