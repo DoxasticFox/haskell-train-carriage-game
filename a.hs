@@ -72,8 +72,8 @@ decTo
 decTo base n width =
     reverse $ decTo' n width
     where
-        decTo' 0 width = replicate width 0
-        decTo' n width = n `rem` base : decTo' (n `quot` base) (width - 1)
+        decTo' n width | n <= 0    = replicate width 0
+                       | otherwise = n `rem` base : decTo' (n `quot` base) (width - 1)
 
 split
     :: [a]
