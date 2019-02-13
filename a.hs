@@ -1,5 +1,5 @@
-import Data.List
 import Data.Char
+import Data.List
 
 data BinOp
     = Add
@@ -22,6 +22,7 @@ data Expr
     | BinExpr Expr BinOp Expr
     | UniExpr UniOp Expr
 
+-- TODO: Shouldn't render as doubles
 instance Show Expr where
     show (Term a) = show a
     show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
@@ -43,6 +44,31 @@ instance Show UniOp where
     show Flo = "floor"
     show Cei = "ceil"
     show Fac = "!"
+
+binOps
+    :: [BinOp]
+binOps = [(minBound :: BinOp)..(maxBound :: BinOp)]
+
+uniOps
+    :: [UniOp]
+uniOps = [(minBound :: UniOp)..(maxBound :: UniOp)]
+
+isCommutative
+    :: BinOp
+    -> Bool
+isCommutative Add = True
+isCommutative Mul = True
+isCommutative _   = False
+
+commutativeOps
+    :: [BinOp]
+commutativeOps =
+    [binOp | binOp <- binOps, isCommutative binOp]
+
+nonCommutativeOps
+    :: [BinOp]
+nonCommutativeOps =
+    [binOp | binOp <- binOps, not $ isCommutative binOp]
 
 binOpToFun
     :: BinOp
@@ -87,41 +113,55 @@ split xs n =
     in
         (left, right)
 
-splits
+nonCommutativeSplits
     :: [a]
     -> [([a], [a])]
-splits xs =
+nonCommutativeSplits xs =
     map (split xs) [1..2^length xs - 2]
 
+commutativeSplits
+    :: [a]
+    -> [([a], [a])]
+commutativeSplits xs =
+    map (split xs) [1..2^(length xs - 1) - 1]
+
 eval :: Expr -> Double
-eval (Term a)
-    = a
-eval (BinExpr a op b)
-    = (binOpToFun op) (eval a) (eval b)
-eval (UniExpr op a)
-    = (uniOpToFun op) (eval a)
+eval (Term a) =
+    a
+eval (BinExpr a op b) =
+    (binOpToFun op) (eval a) (eval b)
+eval (UniExpr op a) =
+    (uniOpToFun op) (eval a)
 
 makeAll
     :: [Double]
     -> [Expr]
-makeAll [] = []
-makeAll [a] = [Term a]
+makeAll [] =
+    []
+makeAll [a] = [UniExpr uniOp (Term a) | uniOp <- uniOps]
 makeAll xs =
-    let
-        (left, right) = unzip $ splits xs
-        (lExprs, rExprs) = (map makeAll left, map makeAll right)
-        binOps = [(minBound :: BinOp)..]
-        uniOps = [(minBound :: UniOp)..]
-    in
-        [BinExpr lExpr'' binOp rExpr' |
-            binOp     <-binOps,
-            (lExprs, rExprs) <- zip lExprs rExprs,
-            lExpr'   <- lExprs,
-            rExpr'   <- rExprs,
-            lExpr''  <- [UniExpr uniOp lExpr' | uniOp <- uniOps],
-            rExpr''  <- [UniExpr uniOp rExpr' | uniOp <- uniOps]
-            ]
+    makeAll' xs    commutativeSplits    commutativeOps ++
+    makeAll' xs nonCommutativeSplits nonCommutativeOps
+    where
+        makeAll'
+            :: [Double]
+            -> ([Double] -> [([Double], [Double])])
+            -> [BinOp]
+            -> [Expr]
+        makeAll' xs splits ops = let
+            exprPairs = [
+                (lExprs, rExprs) | (left, right) <- splits xs,
+                                   lExprs        <- makeAll left,
+                                   rExprs        <- makeAll right]
 
+            binExprs = [
+                BinExpr lExpr binOp rExpr | (lExpr, rExpr) <- exprPairs,
+                                            binOp          <- ops]
+            in
+                [UniExpr uniOp binExpr | uniOp   <- uniOps,
+                                         binExpr <- binExprs]
+
+-- TODO: Memoise
 make
     :: [Double]
     -> Double
