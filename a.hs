@@ -113,13 +113,13 @@ makeAll xs =
         binOps = [(minBound :: BinOp)..]
         uniOps = [(minBound :: UniOp)..]
     in
-        [BinExpr lExpr__ binOp rExpr_ |
+        [BinExpr lExpr'' binOp rExpr' |
             binOp     <-binOps,
             (lExprs, rExprs) <- zip lExprs rExprs,
-            lExpr_   <- lExprs,
-            rExpr_   <- rExprs,
-            lExpr__  <- [UniExpr uniOp lExpr_ | uniOp <- uniOps],
-            rExpr__  <- [UniExpr uniOp rExpr_ | uniOp <- uniOps]
+            lExpr'   <- lExprs,
+            rExpr'   <- rExprs,
+            lExpr''  <- [UniExpr uniOp lExpr' | uniOp <- uniOps],
+            rExpr''  <- [UniExpr uniOp rExpr' | uniOp <- uniOps]
             ]
 
 make
