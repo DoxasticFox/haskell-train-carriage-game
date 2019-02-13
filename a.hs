@@ -22,7 +22,7 @@ data Expr
     | BinExpr Expr BinOp Expr
     | UniExpr UniOp Expr
 
--- TODO: Simply expressions?
+-- TODO: Simplify expressions?
 instance Show Expr where
     show (Term a) = show a
     show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
@@ -169,6 +169,7 @@ makeAll xs =
     makeAll' xs nonCommutativeSplits nonCommutativeOps
 
 -- TODO: Memoise
+-- TODO: Parallelise
 make
     :: [Integer]
     -> Integer
@@ -176,11 +177,9 @@ make
 make xs n = find (\expr -> eval expr == (Just $ fromIntegral n)) $ makeAll xs
 
 main = do
-    let ns = [0..100]
-    let intLists = map (\n -> decTo 10 n 3) ns
-    let nLists = map (map fromIntegral) intLists
-    let exprs = map (\trainCarriageNumber -> make trainCarriageNumber 10) nLists
-    let hasSol = sum [1 | (Just _) <- exprs]
+    let intLists = map (\n -> decTo 10 n 4) [0..9999]
+    let exprs = map (\trainCarriageNumber -> make trainCarriageNumber 10) intLists
+    let hasSol = sum [1 | (Just _) <- exprs]  -- TODO: Shorten?
     sequence $ do
         (n, expr) <- zip intLists exprs
         let exprStr = case expr of Nothing  -> "No solution."
