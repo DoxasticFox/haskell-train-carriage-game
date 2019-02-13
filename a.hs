@@ -23,11 +23,11 @@ data Expr
     | UniExpr UniOp Expr
 
 instance Show Expr where
-    show (Term t) = show t
+    show (Term a) = show a
     show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
     show (UniExpr Id a) = show a
     show (UniExpr Neg (Term 0.0)) = show 0.0
-    show (UniExpr Fac ex) = show ex ++ show Fac
+    show (UniExpr Fac a) = show a ++ show Fac
     show (UniExpr op a) = "(" ++ show op ++ show a ++ ")"
 
 instance Show BinOp where
