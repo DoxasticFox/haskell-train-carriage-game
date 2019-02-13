@@ -24,11 +24,11 @@ data Expr
 
 instance Show Expr where
     show (Term t) = show t
-    show (BinExpr a op b) = concat ["(", show a, show op, show b, ")"]
+    show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
     show (UniExpr Id a) = show a
     show (UniExpr Neg (Term 0.0)) = show 0.0
     show (UniExpr Fac ex) = show ex ++ show Fac
-    show (UniExpr op a) = concat ["(", show op, show a, ")"]
+    show (UniExpr op a) = "(" ++ show op ++ show a ++ ")"
 
 instance Show BinOp where
     show Add = " + "
