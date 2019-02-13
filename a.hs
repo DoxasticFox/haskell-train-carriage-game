@@ -1,5 +1,4 @@
 import Control.Applicative
-import Data.Char
 import Data.List
 
 data BinOp
@@ -19,16 +18,15 @@ data UniOp
     deriving (Enum, Bounded)
 
 data Expr
-    = Term Double
+    = Term Integer
     | BinExpr Expr BinOp Expr
     | UniExpr UniOp Expr
 
--- TODO: Shouldn't render as doubles
 instance Show Expr where
     show (Term a) = show a
     show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
     show (UniExpr Id a) = show a
-    show (UniExpr Neg (Term 0.0)) = show 0.0
+    show (UniExpr Neg (Term 0)) = show 0
     show (UniExpr Fac a) = show a ++ show Fac
     show (UniExpr op a) = "(" ++ show op ++ show a ++ ")"
 
@@ -97,55 +95,55 @@ uniOpToFun Fac = fact
         fact Nothing  = Nothing
 
 decTo
-    :: Int
-    -> Int
-    -> Int
-    -> [Int]
+    :: Integer
+    -> Integer
+    -> Integer
+    -> [Integer]
 decTo base n width =
     reverse $ decTo' n width
     where
-        decTo' n width | n <= 0    = replicate width 0
+        decTo' n width | n <= 0    = replicate (fromIntegral width) 0
                        | otherwise = n `rem` base : decTo' (n `quot` base) (width - 1)
 
 split
-    :: [a]
-    -> Int
-    -> ([a], [a])
+    :: [Integer]
+    -> Integer
+    -> ([Integer], [Integer])
 split xs n =
     let
-        mask  = decTo 2 n (length xs)
+        mask  = decTo 2 n (toInteger $ length xs)
         left  = [x | (x, m) <- zip xs mask, m == 1]
         right = [x | (x, m) <- zip xs mask, m /= 1]
     in
         (left, right)
 
 nonCommutativeSplits
-    :: [a]
-    -> [([a], [a])]
+    :: [Integer]
+    -> [([Integer], [Integer])]
 nonCommutativeSplits xs =
     map (split xs) [1..2^length xs - 2]
 
 commutativeSplits
-    :: [a]
-    -> [([a], [a])]
+    :: [Integer]
+    -> [([Integer], [Integer])]
 commutativeSplits xs =
     map (split xs) [1..2^(length xs - 1) - 1]
 
 eval :: Expr -> Maybe Double
 eval (Term a) =
-    Just a
+    Just $ fromIntegral a
 eval (BinExpr a op b) =
     (binOpToFun op) (eval a) (eval b)
 eval (UniExpr op a) =
     (uniOpToFun op) (eval a)
 
 makeAll'
-    :: [Double]
-    -> ([Double] -> [([Double], [Double])])
+    :: [Integer]
+    -> ([Integer] -> [([Integer], [Integer])])
     -> [BinOp]
     -> [Expr]
 makeAll' xs splits ops = let
-    exprPairs :: [Double] -> [(Expr, Expr)]
+    exprPairs :: [Integer] -> [(Expr, Expr)]
     exprPairs xs' = [
         (lExpr, rExpr) | (left, right) <- splits xs',
                          lExpr         <- makeAll left,
@@ -160,7 +158,7 @@ makeAll' xs splits ops = let
                                  binExpr <- binExprs (exprPairs xs)]
 
 makeAll
-    :: [Double]
+    :: [Integer]
     -> [Expr]
 makeAll [] =
     []
@@ -171,14 +169,14 @@ makeAll xs =
 
 -- TODO: Memoise
 make
-    :: [Double]
-    -> Double
+    :: [Integer]
+    -> Integer
     -> Maybe Expr
-make xs n = find (\expr -> eval expr == Just n) $ makeAll xs
+make xs n = find (\expr -> eval expr == (Just $ fromIntegral n)) $ makeAll xs
 
 main = do
     let ns = [0..100]
-    let intLists = map (\n -> decTo 10 n 4) ns
+    let intLists = map (\n -> decTo 10 n 3) ns
     let nLists = map (map fromIntegral) intLists
     let exprs = map (\trainCarriageNumber -> make trainCarriageNumber 10) nLists
     let hasSol = sum [1 | (Just _) <- exprs]
@@ -186,6 +184,6 @@ main = do
         (n, expr) <- zip intLists exprs
         let exprStr = case expr of Nothing  -> "No solution."
                                    (Just e) -> show e
-        return $ putStrLn $ (map intToDigit n) ++ "    " ++ exprStr
+        return $ putStrLn $ (show =<< n) ++ "    " ++ exprStr
     putStrLn ""
     putStrLn $ (show hasSol) ++ " of 10000 carriage numbers from 0000 to 9999 make 10."
