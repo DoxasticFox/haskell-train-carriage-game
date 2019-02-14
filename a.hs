@@ -203,7 +203,7 @@ makeAll xns = (memoise make) [(sort xs, n) | (xs, n) <- xns]
 main = do
     let intLists = map (\n -> decTo 10 n 3) [0..999]
     let exprs = makeAll $ zip intLists (repeat 10)
-    let hasSol = sum [1 | (Just _) <- exprs]  -- TODO: Shorten?
+    let hasSol = sum [1 | Just _ <- exprs]
     sequence $ do
         (n, expr) <- zip intLists exprs
         let exprStr = case expr of Nothing  -> "No solution."
