@@ -1,5 +1,6 @@
-import Control.Applicative
-import Data.List
+import           Control.Applicative
+import           Data.List
+import qualified Data.Map.Lazy as M
 
 data BinOp
     = Add
@@ -138,17 +139,17 @@ eval (BinExpr a op b) =
 eval (UniExpr op a) =
     (uniOpToFun op) (eval a)
 
-makeAll'
+makeExprs'
     :: [Integer]
     -> ([Integer] -> [([Integer], [Integer])])
     -> [BinOp]
     -> [Expr]
-makeAll' xs splits ops = let
+makeExprs' xs splits ops = let
     exprPairs :: [Integer] -> [(Expr, Expr)]
     exprPairs xs' = [
         (lExpr, rExpr) | (left, right) <- splits xs',
-                         lExpr         <- makeAll left,
-                         rExpr         <- makeAll right]
+                         lExpr         <- makeExprs left,
+                         rExpr         <- makeExprs right]
 
     binExprs :: [(Expr, Expr)] -> [Expr]
     binExprs exprPairs' = [
@@ -158,27 +159,50 @@ makeAll' xs splits ops = let
         [UniExpr uniOp binExpr | uniOp   <- uniOps,
                                  binExpr <- binExprs (exprPairs xs)]
 
-makeAll
+makeExprs
     :: [Integer]
     -> [Expr]
-makeAll [] =
+makeExprs [] =
     []
-makeAll [a] = [UniExpr uniOp (Term a) | uniOp <- uniOps]
-makeAll xs =
-    makeAll' xs    commutativeSplits    commutativeOps ++
-    makeAll' xs nonCommutativeSplits nonCommutativeOps
+makeExprs [a] = [UniExpr uniOp (Term a) | uniOp <- uniOps]
+makeExprs xs =
+    makeExprs' xs    commutativeSplits    commutativeOps ++
+    makeExprs' xs nonCommutativeSplits nonCommutativeOps
 
--- TODO: Memoise
+memoise
+    :: Ord a
+    => (a -> b)
+    -> [a]
+    -> [b]
+memoise = memoise' M.empty
+    where
+        memoise'
+            :: Ord a
+            => M.Map a b
+            -> (a -> b)
+            -> [a]
+            -> [b]
+        memoise' cache f [] = []
+        memoise' cache f (x:xs) =
+            let
+                v = M.findWithDefault (f x) x cache
+            in
+                v : memoise' (M.insert x v cache) f xs
+
 -- TODO: Parallelise
 make
-    :: [Integer]
-    -> Integer
+    :: ([Integer], Integer)
     -> Maybe Expr
-make xs n = find (\expr -> eval expr == (Just $ fromIntegral n)) $ makeAll xs
+make (xs, n) = find (\expr -> eval expr == (Just $ fromIntegral n)) $ makeExprs xs
+
+makeAll
+    :: [([Integer], Integer)]
+    -> [Maybe Expr]
+makeAll xns = (memoise make) [(sort xs, n) | (xs, n) <- xns]
 
 main = do
-    let intLists = map (\n -> decTo 10 n 4) [0..9999]
-    let exprs = map (\trainCarriageNumber -> make trainCarriageNumber 10) intLists
+    let intLists = map (\n -> decTo 10 n 3) [0..999]
+    let exprs = makeAll $ zip intLists (repeat 10)
     let hasSol = sum [1 | (Just _) <- exprs]  -- TODO: Shorten?
     sequence $ do
         (n, expr) <- zip intLists exprs
