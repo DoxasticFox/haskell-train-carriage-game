@@ -1,5 +1,4 @@
 import Control.Applicative
-import Data.Function.Memoize
 import Data.List
 
 data BinOp
@@ -169,19 +168,13 @@ makeAll xs =
     makeAll' xs    commutativeSplits    commutativeOps ++
     makeAll' xs nonCommutativeSplits nonCommutativeOps
 
+-- TODO: Memoise
 -- TODO: Parallelise
 make
     :: [Integer]
     -> Integer
     -> Maybe Expr
-make xs n =
-    make' (sort xs) n
-    where
-        make' = memoize2 make''
-        make'' xs n = find
-            (\expr -> eval expr == (Just $ fromIntegral n)) $
-            makeAll xs
-
+make xs n = find (\expr -> eval expr == (Just $ fromIntegral n)) $ makeAll xs
 
 main = do
     let intLists = map (\n -> decTo 10 n 4) [0..9999]
