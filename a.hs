@@ -1,4 +1,6 @@
+-- TODO: Split into modules
 import           Control.Applicative
+import           Control.Parallel.Strategies
 import           Data.List
 import qualified Data.Map.Lazy as M
 
@@ -169,27 +171,30 @@ makeExprs xs =
     makeExprs' xs    commutativeSplits    commutativeOps ++
     makeExprs' xs nonCommutativeSplits nonCommutativeOps
 
-memoise
+-- | Behaves like `map` but incorporates memoisation and parallelisation.
+-- | The performance improvement over `map` is a little disappointing, but it's
+-- | still better than nothing. It's possible that if someone who knew what they
+-- | were doing took a shot at writing this, their version would take half the
+-- | time to run.
+fastMap
     :: Ord a
     => (a -> b)
     -> [a]
     -> [b]
-memoise = memoise' M.empty
+fastMap f xs = runEval $ fastMap' M.empty f xs
     where
-        memoise'
+        fastMap'
             :: Ord a
             => M.Map a b
             -> (a -> b)
             -> [a]
-            -> [b]
-        memoise' cache f [] = []
-        memoise' cache f (x:xs) =
-            let
-                v = M.findWithDefault (f x) x cache
-            in
-                v : memoise' (M.insert x v cache) f xs
+            -> Eval [b]
+        fastMap' cache f [] = return []
+        fastMap' cache f (x:xs) = do
+            v <- rpar $ M.findWithDefault (f x) x cache
+            vs <- fastMap' (M.insert x v cache) f xs
+            return $ v:vs
 
--- TODO: Parallelise
 make
     :: ([Integer], Integer)
     -> Maybe Expr
@@ -198,10 +203,10 @@ make (xs, n) = find (\expr -> eval expr == (Just $ fromIntegral n)) $ makeExprs 
 makeAll
     :: [([Integer], Integer)]
     -> [Maybe Expr]
-makeAll xns = (memoise make) [(sort xs, n) | (xs, n) <- xns]
+makeAll xns = fastMap make [(sort xs, n) | (xs, n) <- xns]
 
 main = do
-    let intLists = map (\n -> decTo 10 n 3) [0..999]
+    let intLists = map (\n -> decTo 10 n 4) [0..9999]
     let exprs = makeAll $ zip intLists (repeat 10)
     let hasSol = sum [1 | Just _ <- exprs]
     sequence $ do
