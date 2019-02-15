@@ -1,6 +1,7 @@
 -- TODO: Split into modules
 import           Control.Applicative
 import           Control.Parallel.Strategies
+import           Data.Fixed
 import           Data.List
 import qualified Data.Map.Lazy as M
 
@@ -39,7 +40,7 @@ instance Show BinOp where
     show Sub = " - "
     show Mul = " × "
     show Div = " ÷ "
-    show Exp = " ^ "
+    show Exp = "^"
 
 instance Show UniOp where
     show Id  = ""
@@ -47,6 +48,49 @@ instance Show UniOp where
     show Flo = "floor"
     show Cei = "ceil"
     show Fac = "!"
+
+rewrite
+    :: Expr
+    -> Expr
+rewrite (Term a) = Term a
+rewrite (BinExpr a op b) =
+    let
+        a' = rewrite a
+        b' = rewrite b
+    in
+        case (a', op, b') of
+            (UniExpr Neg a'', Mul, UniExpr Neg b'') -> BinExpr a'' Mul b''
+            (UniExpr Neg a'', Mul, b''            ) -> UniExpr Neg (BinExpr a'' Mul b'')
+            (a''            , Mul, UniExpr Neg b'') -> UniExpr Neg (BinExpr a'' Mul b'')
+
+            (UniExpr Neg a'', Div, UniExpr Neg b'') -> BinExpr a'' Div b''
+            (UniExpr Neg a'', Div, b''            ) -> UniExpr Neg (BinExpr a'' Div b'')
+            (a''            , Div, UniExpr Neg b'') -> UniExpr Neg (BinExpr a'' Div b'')
+
+            (UniExpr Neg a'', Add, UniExpr Neg b'') -> UniExpr Neg (BinExpr a'' Add b'')
+            (UniExpr Neg a'', Add, b''            ) -> UniExpr Neg (BinExpr a'' Sub b'')
+            (a''            , Add, UniExpr Neg b'') -> UniExpr Neg (BinExpr b'' Sub a'')
+
+            (UniExpr Neg a'', Exp, b'') ->
+                if   ((liftA2 mod') (eval b'') (Just 2) == Just 0)
+                  && ((liftA2 (>=)) (eval b'') (Just 0)) == Just True
+                then BinExpr a''               Exp b''
+                else BinExpr (UniExpr Neg a'') Exp b''
+
+            (_, _, _) -> BinExpr a' op b'
+
+rewrite (UniExpr op a) =
+    let
+        a' = rewrite a
+    in
+        case (op, a') of
+            (Id, Term a''        ) -> Term a''
+            (Neg, UniExpr Neg a'') -> a''
+            (Id , UniExpr Neg a'') -> UniExpr Neg a''
+            (Neg, UniExpr Id  a'') -> UniExpr Neg a''
+
+            (_, _) -> UniExpr op a'
+
 
 binOps
     :: [BinOp]
@@ -212,7 +256,7 @@ main = do
     sequence $ do
         (n, expr) <- zip intLists exprs
         let exprStr = case expr of Nothing  -> "No solution."
-                                   (Just e) -> show e
+                                   (Just e) -> show $ rewrite e
         return $ putStrLn $ (show =<< n) ++ "    " ++ exprStr
     putStrLn ""
     putStrLn $ (show hasSol) ++ " of 10000 carriage numbers from 0000 to 9999 make 10."
