@@ -57,7 +57,7 @@ makeAll
 makeAll xns = fastMap make [(sort xs, n) | (xs, n) <- xns]
 
 main = do
-    let intLists = map (\n -> decTo 10 n 5) [99507..99999]
+    let intLists = map (\n -> decTo 10 n 4) [0..9999]
     let exprs = makeAll $ zip intLists (repeat 10)
     let hasSol = sum [1 | Just _ <- exprs]
     sequence $ do
