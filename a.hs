@@ -11,7 +11,7 @@ data BinOp
     | Mul
     | Div
     | Exp
-    deriving (Enum, Bounded)
+    deriving (Bounded, Enum, Eq)
 
 data UniOp
     = Neg
@@ -19,21 +19,35 @@ data UniOp
     | Flo
     | Cei
     | Fac
-    deriving (Enum, Bounded)
+    deriving (Bounded, Enum, Eq)
 
 data Expr
     = Term Integer
     | BinExpr Expr BinOp Expr
     | UniExpr UniOp Expr
 
--- TODO: Simplify expressions?
 instance Show Expr where
     show (Term a) = show a
-    show (BinExpr a op b) = "(" ++ show a ++ show op ++ show b ++ ")"
-    show (UniExpr Id a) = show a
-    show (UniExpr Neg (Term 0)) = show 0
-    show (UniExpr Fac a) = show a ++ show Fac
-    show (UniExpr op a) = "(" ++ show op ++ show a ++ ")"
+
+    show (BinExpr a opA ex@(BinExpr b opB c)) =
+        if   opA == opB && isAssociative opA
+        then show a ++ show opA ++        show ex
+        else show a ++ show opA ++ "(" ++ show ex ++ ")"
+    show (BinExpr ex@(BinExpr a opA b) opB c) =
+        if   opA == opB && isAssociative opA
+        then        show ex ++        show opB ++ show c
+        else "(" ++ show ex ++ ")" ++ show opB ++ show c
+    show (BinExpr a Exp b) =
+        if   (liftA2 (<)) (eval a) (Just 0) == Just True
+        then "(" ++ show a ++ ")" ++ show Exp ++ show b
+        else        show a        ++ show Exp ++ show b
+    show (BinExpr a op b) = show a ++ show op ++ show b
+
+    show (UniExpr Fac (Term a)) =        show a ++        show Fac
+    show (UniExpr Fac a       ) = "(" ++ show a ++ ")" ++ show Fac
+
+    show (UniExpr op (Term a)) = show op ++        show a
+    show (UniExpr op a)        = show op ++ "(" ++ show a ++ ")"
 
 instance Show BinOp where
     show Add = " + "
@@ -84,38 +98,34 @@ rewrite (UniExpr op a) =
         a' = rewrite a
     in
         case (op, a') of
-            (Id, Term a''        ) -> Term a''
+            (Id, a''             ) -> a''
+            (Neg, Term 0         ) -> Term 0
             (Neg, UniExpr Neg a'') -> a''
-            (Id , UniExpr Neg a'') -> UniExpr Neg a''
-            (Neg, UniExpr Id  a'') -> UniExpr Neg a''
 
             (_, _) -> UniExpr op a'
 
 
-binOps
-    :: [BinOp]
+binOps :: [BinOp]
 binOps = [(minBound :: BinOp)..(maxBound :: BinOp)]
 
-uniOps
-    :: [UniOp]
+uniOps :: [UniOp]
 uniOps = [(minBound :: UniOp)..(maxBound :: UniOp)]
 
-isCommutative
-    :: BinOp
-    -> Bool
+isAssociative :: BinOp -> Bool
+isAssociative Add = True
+isAssociative Mul = True
+isAssociative _   = False
+
+isCommutative :: BinOp -> Bool
 isCommutative Add = True
 isCommutative Mul = True
 isCommutative _   = False
 
-commutativeOps
-    :: [BinOp]
-commutativeOps =
-    [binOp | binOp <- binOps, isCommutative binOp]
+commutativeOps :: [BinOp]
+commutativeOps = [binOp | binOp <- binOps, isCommutative binOp]
 
-nonCommutativeOps
-    :: [BinOp]
-nonCommutativeOps =
-    [binOp | binOp <- binOps, not $ isCommutative binOp]
+nonCommutativeOps :: [BinOp]
+nonCommutativeOps = [binOp | binOp <- binOps, not $ isCommutative binOp]
 
 binOpToFun
     :: BinOp
@@ -138,8 +148,8 @@ uniOpToFun Flo = liftA (fromIntegral . floor)
 uniOpToFun Cei = liftA (fromIntegral . ceiling)
 uniOpToFun Fac = fact
     where
-        fact (Just n) | n < 10    = Just $ product [1..n]
-                      | otherwise = Nothing
+        fact (Just n) | n >= 0 && n < 10 = Just $ product [1..n]
+                      | otherwise        = Nothing
         fact Nothing  = Nothing
 
 decTo
@@ -178,12 +188,9 @@ commutativeSplits xs =
     map (split xs) [1..2^(length xs - 1) - 1]
 
 eval :: Expr -> Maybe Double
-eval (Term a) =
-    Just $ fromIntegral a
-eval (BinExpr a op b) =
-    (binOpToFun op) (eval a) (eval b)
-eval (UniExpr op a) =
-    (uniOpToFun op) (eval a)
+eval (Term a)         = Just $ fromIntegral a
+eval (BinExpr a op b) = (binOpToFun op) (eval a) (eval b)
+eval (UniExpr op a)   = (uniOpToFun op) (eval a)
 
 makeExprs'
     :: [Integer]
@@ -250,7 +257,7 @@ makeAll
 makeAll xns = fastMap make [(sort xs, n) | (xs, n) <- xns]
 
 main = do
-    let intLists = map (\n -> decTo 10 n 4) [0..9999]
+    let intLists = map (\n -> decTo 10 n 5) [99507..99999]
     let exprs = makeAll $ zip intLists (repeat 10)
     let hasSol = sum [1 | Just _ <- exprs]
     sequence $ do
