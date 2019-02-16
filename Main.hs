@@ -60,10 +60,10 @@ main = do
     let intLists = map (\n -> decTo 10 n 4) [0..9999]
     let exprs = makeAll $ zip intLists (repeat 10)
     let hasSol = sum [1 | Just _ <- exprs]
-    sequence $ do
+    sequence_ $ do
         (n, expr) <- zip intLists exprs
         let exprStr = case expr of Nothing  -> "No solution."
                                    (Just e) -> show $ rewrite e
         return $ putStrLn $ (show =<< n) ++ "    " ++ exprStr
     putStrLn ""
-    putStrLn $ (show hasSol) ++ " of 10000 carriage numbers from 0000 to 9999 make 10."
+    putStrLn $ show hasSol ++ " of 10000 carriage numbers from 0000 to 9999 make 10."

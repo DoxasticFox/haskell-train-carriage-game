@@ -25,7 +25,7 @@ instance Show Expr where
         then        show ex ++        show opB ++ show c
         else "(" ++ show ex ++ ")" ++ show opB ++ show c
     show (BinExpr a Exp b) =
-        if   (liftA2 (<)) (eval a) (Just 0) == Just True
+        if   liftA2 (<) (eval a) (Just 0) == Just True
         then "(" ++ show a ++ ")" ++ show Exp ++ show b
         else        show a        ++ show Exp ++ show b
     show (BinExpr a op b) = show a ++ show op ++ show b
@@ -59,8 +59,8 @@ rewrite (BinExpr a op b) =
             (a''            , Add, UniExpr Neg b'') -> UniExpr Neg (BinExpr b'' Sub a'')
 
             (UniExpr Neg a'', Exp, b'') ->
-                if   ((liftA2 mod') (eval b'') (Just 2) == Just 0)
-                  && ((liftA2 (>=)) (eval b'') (Just 0)) == Just True
+                if   liftA2 mod' (eval b'') (Just 2) == Just 0
+                  && liftA2 (>=) (eval b'') (Just 0) == Just True
                 then BinExpr a''               Exp b''
                 else BinExpr (UniExpr Neg a'') Exp b''
 
@@ -79,5 +79,5 @@ rewrite (UniExpr op a) =
 
 eval :: Expr -> Maybe Double
 eval (Term a)         = Just $ fromIntegral a
-eval (BinExpr a op b) = (binOpToFun op) (eval a) (eval b)
-eval (UniExpr op a)   = (uniOpToFun op) (eval a)
+eval (BinExpr a op b) = binOpToFun op (eval a) (eval b)
+eval (UniExpr op a)   = uniOpToFun op (eval a)
